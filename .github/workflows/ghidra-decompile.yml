@@ -6,6 +6,7 @@ on:
     paths:
       - "samp.dll"
       - "scripts/ExportAll.java"
+      - "README.md"
       - ".github/workflows/ghidra-decompile.yml"
 
 permissions:
