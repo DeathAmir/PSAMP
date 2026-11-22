@@ -6,6 +6,7 @@ on:
     paths:
       - "samp.dll"
       - "scripts/ExportAll.java"
+      - "scripts/FindSaa2Key.java"
       - "README.md"
       - ".github/workflows/ghidra-decompile.yml"
 
@@ -70,7 +71,7 @@ jobs:
           test -d "$GITHUB_WORKSPACE/reverse"
           test -s "$GITHUB_WORKSPACE/samp.dll"
 
-      - name: Decompile samp.dll
+      - name: Decompile and locate SAA2 RSA key
         shell: bash
         run: |
           set -euo pipefail
@@ -82,32 +83,36 @@ jobs:
             -analysisTimeoutPerFile 7200 \
             -scriptPath "$GITHUB_WORKSPACE/scripts" \
             -postScript ExportAll.java "$GITHUB_WORKSPACE/reverse/samp_decompiled.c" \
+            -postScript FindSaa2Key.java "$GITHUB_WORKSPACE/reverse/saa2_key_location.txt" \
             -deleteProject
           test -s "$GITHUB_WORKSPACE/reverse/samp_decompiled.c"
+          test -s "$GITHUB_WORKSPACE/reverse/saa2_key_location.txt"
           echo "Generated output:"
           wc -lc "$GITHUB_WORKSPACE/reverse/samp_decompiled.c"
-          head -n 20 "$GITHUB_WORKSPACE/reverse/samp_decompiled.c"
+          cat "$GITHUB_WORKSPACE/reverse/saa2_key_location.txt"
 
-      - name: Upload decompilation output
+      - name: Upload analysis outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: samp-ghidra-decompilation
-          path: reverse/samp_decompiled.c
+          name: samp-ghidra-analysis
+          path: |
+            reverse/samp_decompiled.c
+            reverse/saa2_key_location.txt
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Commit generated C output
+      - name: Commit generated analysis
         if: success()
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add reverse/samp_decompiled.c
+          git add reverse/samp_decompiled.c reverse/saa2_key_location.txt
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Add Ghidra decompilation of samp.dll"
+            git commit -m "Add SAA2 RSA public key location report"
             git push origin HEAD:main
           fi
