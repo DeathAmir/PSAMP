@@ -1,0 +1,3 @@
+pattern_size=148
+image_base=10000000
+matches=0
